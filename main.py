@@ -1,7 +1,7 @@
 import os
 from dotenv import load_dotenv
 from google import genai
-
+from argparse import ArgumentParser
 
 
 
@@ -11,7 +11,7 @@ def main():
     if api_key is None:
         raise RuntimeError('Key has not been found')
     client = genai.Client(api_key=api_key)
-    prompt = "Why is Boot.dev such a great place to learn backend development? Use one paragraph maximum."
+    prompt = parse_arguments()
     response = client.models.generate_content(
         model='gemini-2.5-flash', contents=prompt
     )
@@ -25,6 +25,13 @@ def model_response(prompt, response):
     print(f'Prompt tokens: {response.usage_metadata.prompt_token_count}')
     print(f'Response tokens: {response.usage_metadata.candidates_token_count}')
     print(f'Response:\n{response.text} ')
+
+
+def parse_arguments():
+    parser = ArgumentParser(description="Chatbot")
+    parser.add_argument("user_prompt", type=str, help="User prompt")
+    args = parser.parse_args()
+    return args.user_prompt
 
 if __name__ == "__main__":
     main()
