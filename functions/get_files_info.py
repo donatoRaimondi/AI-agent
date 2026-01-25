@@ -26,5 +26,5 @@ def get_files_info(working_directory, directory="."):
                 dir_content = dir_content + f"- {item}: file_size:{os.path.getsize(os.path.join(target_dir, item))}, is_dir={os.path.isdir(os.path.join(target_dir, item))}\n"
         
         return dir_content
-    except:
-        return f"Error: something went wrong"
+    except Exception as e:
+        return f"Error: {e}"
