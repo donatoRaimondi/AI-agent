@@ -3,7 +3,9 @@ from dotenv import load_dotenv
 from google import genai
 from argparse import ArgumentParser
 from google.genai import types
-
+from prompts import system_prompt
+from call_function import call_function
+from call_function import available_functions
 
 def main():
     load_dotenv()
@@ -16,9 +18,10 @@ def main():
     prompt = args.user_prompt
 
     messages = [types.Content(role="user", parts=[types.Part(text=prompt)])] 
-
+    
+    # temperature is 0 for reproducibility sake atm
     response = client.models.generate_content(
-        model='gemini-2.5-flash', contents=messages
+        model='gemini-2.5-flash', contents=messages, config=types.GenerateContentConfig(system_instruction=system_prompt, temperature=0, tools=[available_functions]),
     )
 
     if response.usage_metadata is None:
@@ -27,12 +30,33 @@ def main():
     model_response(prompt, response, verbose=args.verbose)
 
     
-def model_response(prompt, response, verbose=False):
+def model_response(prompt, response, client=None, messages=None, verbose=False):
     if verbose:
         print(f'User prompt: {prompt}')
         print(f'Prompt tokens: {response.usage_metadata.prompt_token_count}')
         print(f'Response tokens: {response.usage_metadata.candidates_token_count}')
-    print(f'Response:\n{response.text} ')
+
+    function_result = []
+
+    if isinstance(response.function_calls, list) and response.function_calls:
+        for function_call in response.function_calls:
+            print(f"Calling function: {function_call.name}({function_call.args})")
+
+            function_call_result = call_function(function_call, verbose=verbose)
+
+            if not (isinstance(function_call_result.parts, list)
+                    and function_call_result.parts
+                    and function_call_result.parts[0].function_response
+                    and function_call_result.parts[0].function_response.response is not None):
+                raise Exception("Error: tool did not return a valid function_response")
+
+            function_result.append(function_call_result.parts[0])
+
+            if verbose:
+                print(f"-> {function_call_result.parts[0].function_response.response}")
+
+    else:
+        print(f'Response:\n{response.text}')
 
 
 def parse_arguments():
