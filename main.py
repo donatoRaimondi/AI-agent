@@ -30,33 +30,37 @@ def main():
     model_response(prompt, response, verbose=args.verbose)
 
     
-def model_response(prompt, response, client=None, messages=None, verbose=False):
+def model_response(prompt, response, verbose=False):
     if verbose:
-        print(f'User prompt: {prompt}')
-        print(f'Prompt tokens: {response.usage_metadata.prompt_token_count}')
-        print(f'Response tokens: {response.usage_metadata.candidates_token_count}')
+        print(f"User prompt: {prompt}")
+        print(f"Prompt tokens: {response.usage_metadata.prompt_token_count}")
+        print(f"Response tokens: {response.usage_metadata.candidates_token_count}")
 
     function_result = []
 
     if isinstance(response.function_calls, list) and response.function_calls:
         for function_call in response.function_calls:
-            print(f"Calling function: {function_call.name}({function_call.args})")
-
+            # Call our dispatcher
             function_call_result = call_function(function_call, verbose=verbose)
 
-            if not (isinstance(function_call_result.parts, list)
-                    and function_call_result.parts
-                    and function_call_result.parts[0].function_response
-                    and function_call_result.parts[0].function_response.response is not None):
+            # Validate returned structure (per assignment)
+            if not (isinstance(function_call_result.parts, list) and function_call_result.parts):
+                raise Exception("Error: tool did not return a non-empty parts list")
+
+            if function_call_result.parts[0].function_response is None:
                 raise Exception("Error: tool did not return a valid function_response")
 
+            if function_call_result.parts[0].function_response.response is None:
+                raise Exception("Error: tool did not return a valid function_response.response")
+
+            # Store the Part (per assignment)
             function_result.append(function_call_result.parts[0])
 
             if verbose:
                 print(f"-> {function_call_result.parts[0].function_response.response}")
 
     else:
-        print(f'Response:\n{response.text}')
+        print(f"Response:\n{response.text}")
 
 
 def parse_arguments():
